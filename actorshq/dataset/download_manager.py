@@ -10,6 +10,10 @@ import requests
 import yaml
 from tqdm import tqdm
 
+import sys
+sys.path
+sys.path.append('./')
+
 from actorshq.dataset.volumetric_dataset import VolumetricDataset, VolumetricDatasetFilepaths
 
 
@@ -268,6 +272,7 @@ def main():
         include_mesh="mesh" in args.include,
     )
 
+    print('Done.')
 
 if __name__ == "__main__":
     main()
