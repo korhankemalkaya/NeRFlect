@@ -2,9 +2,9 @@ import os
 import shutil
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Tuple
+from typing import Tuple, List
 
-from actorshq.dataset.camera_data import read_calibration_csv, write_calibration_csv
+from actorshq.dataset.camera_data import read_calibration_csv, read_calibration_orbited_csv, write_calibration_csv, read_calibration_list, CameraData
 from actorshq.dataset.data_loader import DataLoader
 from actorshq.dataset.generate_camera_trajectory import generate_camera_trajectory
 from actorshq.dataset.volumetric_dataset import VolumetricDataset, VolumetricDatasetFilepaths
@@ -55,7 +55,54 @@ def get_trajectory_dataloader_from_calibration(
     new_dataset_fp = VolumetricDatasetFilepaths(test_data_folder)
     shutil.copy(calibration_path, new_dataset_fp.calibration_path)
 
-    new_cameras = read_calibration_csv(new_dataset_fp.calibration_path)
+    new_cameras = read_calibration_csv(new_dataset_fp.calibration_path)      
+    trajectory_num_cameras = len(new_cameras)
+    assert trajectory_num_cameras > 0
+
+    render_sequence = []
+    total_num_frames = len(frame_numbers)
+    total_length = max(total_num_frames, trajectory_num_cameras)
+    for num in range(total_length):
+        camera_number = num % trajectory_num_cameras
+        if (num // trajectory_num_cameras) % 2 == 1:
+            camera_number = trajectory_num_cameras - 1 - camera_number
+
+        frame_idx = num % total_num_frames
+        if (num // total_num_frames) % 2 == 1:
+            frame_idx = total_num_frames - 1 - frame_idx
+
+        render_sequence.append((camera_number, frame_numbers[frame_idx]))
+    return DataLoader(
+      dataset=VolumetricDataset(new_dataset_fp.folder, crop_center_square=False),
+      device=device,
+      mode=DataLoader.Mode.TEST,
+      dataloader_output_mode=dataloader_output_mode,
+      space_pruning_mode=space_pruning_mode,
+      batch_size=batch_size,
+      camera_numbers=list(range(trajectory_num_cameras)),
+      frame_numbers=frame_numbers,
+      max_buffer_size=1,
+      render_sequence=render_sequence,
+      )
+
+def get_trajectory_dataloader_from_list(
+    base_data_folder: Path,
+    device: str,
+    dataloader_output_mode: DataLoader.OutputMode,
+    space_pruning_mode: DataLoader.SpacePruningMode,
+    batch_size: int,
+    frame_numbers: Tuple[int, ...],
+) -> DataLoader:
+
+    test_data_folder = base_data_folder.parent / "test"
+    if test_data_folder.exists():
+        shutil.rmtree(test_data_folder)
+
+    test_data_folder.mkdir()
+    new_dataset_fp = VolumetricDatasetFilepaths(test_data_folder)
+
+    # We use the calibration_list directly instead of reading from a file
+    new_cameras = read_calibration_list()
     trajectory_num_cameras = len(new_cameras)
     assert trajectory_num_cameras > 0
 
@@ -85,7 +132,6 @@ def get_trajectory_dataloader_from_calibration(
         max_buffer_size=1,
         render_sequence=render_sequence,
     )
-
 
 def get_trajectory_dataloader_from_keycams(
     trajectory: Tuple[int, ...],
@@ -161,3 +207,30 @@ def get_trajectory_dataloader_from_keycams(
                 batch_size=batch_size,
                 frame_numbers=frame_numbers,
             )
+          
+
+def get_trajectory_dataloader_from_calibration_orbited(
+    calibration_path: Path,
+    base_data_folder: Path,
+    device: str,
+    dataloader_output_mode: DataLoader.OutputMode,
+    space_pruning_mode: DataLoader.SpacePruningMode,
+    batch_size: int,
+    frame_numbers: Tuple[int, ...],
+    num_samples: int,
+) -> DataLoader:
+
+  cameras = read_calibration_orbited_csv(calibration_path, num_samples)          
+  with TemporaryDirectory() as tmpdir:
+    tmp_calibration_path = Path(tmpdir) / "calibration.csv"
+    write_calibration_csv(cameras, tmp_calibration_path)
+
+    return get_trajectory_dataloader_from_calibration(
+      calibration_path=tmp_calibration_path,
+      base_data_folder=base_data_folder,
+      device=device,
+      dataloader_output_mode=dataloader_output_mode,
+      space_pruning_mode=space_pruning_mode,
+      batch_size=batch_size,
+      frame_numbers=frame_numbers,
+    )

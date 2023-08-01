@@ -181,3 +181,98 @@ def read_calibration_csv(input_csv_path: Path) -> List[CameraData]:
             )
             cameras.append(camera)
     return cameras
+
+def rotation_matrix_from_axis_angle(axis_angle):
+    """Convert an axis-angle rotation into a rotation matrix."""
+    angle = np.linalg.norm(axis_angle)
+    axis = axis_angle / angle
+    a = np.cos(angle / 2)
+    b, c, d = -axis * np.sin(angle / 2)
+    return np.array([[a*a+b*b-c*c-d*d, 2*(b*c-a*d), 2*(b*d+a*c)],
+                     [2*(b*c+a*d), a*a+c*c-b*b-d*d, 2*(c*d-a*b)],
+                     [2*(b*d-a*c), 2*(c*d+a*b), a*a+d*d-b*b-c*c]])
+
+def axis_angle_from_rotation_matrix(rotation_matrix):
+    """Convert a rotation matrix into an axis-angle representation."""
+    angle = np.arccos((np.trace(rotation_matrix) - 1) / 2)
+    x = (rotation_matrix[2, 1] - rotation_matrix[1, 2]) / (2 * np.sin(angle))
+    y = (rotation_matrix[0, 2] - rotation_matrix[2, 0]) / (2 * np.sin(angle))
+    z = (rotation_matrix[1, 0] - rotation_matrix[0, 1]) / (2 * np.sin(angle))
+    return np.array([x, y, z]) * angle
+
+def read_calibration_orbited_csv(input_csv_path: Path, num_samples: int) -> List[CameraData]:
+    """Read camera intrinsics and extrinsics from a calibration CSV file.
+
+    Args:
+        input_csv_path (Path): Path to a CSV file that contains camera calibration data.
+        num_samples (int): Number of sampled cameras in the orbit
+
+    Returns:
+        List[CameraData]: A list of `CameraData` objects that describe multiple camera intrinsics and extrinsics and orbited ones. 
+    """
+    csv_cameras = read_calibration_csv(input_csv_path)
+    cameras = []
+    angle_step = 2 * np.pi / num_samples
+    
+    for curr_camera in csv_cameras:
+      cameras.append(curr_camera)
+      for i in range(num_samples - 1 ):
+        angle = i * angle_step
+
+        # Create a rotation matrix for the orbit
+        orbit_rotation = rotation_matrix_from_axis_angle(np.array([0, angle, 0]))
+        # Convert the camera's rotation into a rotation matrix
+        camera_rotation = rotation_matrix_from_axis_angle(curr_camera.rotation_axisangle)
+        # Apply the orbit rotation to the camera
+        new_rotation_matrix = np.dot(orbit_rotation, camera_rotation)
+
+        # Convert the new rotation back into axis-angle representation
+        new_rotation_axisangle = axis_angle_from_rotation_matrix(new_rotation_matrix)
+
+        # Rotate the camera's position for the orbit
+        new_translation = np.dot(orbit_rotation, curr_camera.translation)
+
+        new_camera = CameraData(
+            name=f"{curr_camera.name}_orbit_{i}",
+            width=curr_camera.width,
+            height=curr_camera.height,
+            rotation_axisangle=new_rotation_axisangle,
+            translation=new_translation,
+            focal_length=curr_camera.focal_length,
+            principal_point=curr_camera.principal_point,
+        )
+
+        cameras.append(new_camera)
+    return cameras
+
+
+def read_calibration_list() -> List[CameraData]:
+    """Read camera intrinsics and extrinsics from a list.
+
+    Returns:
+        List[CameraData]: A list of `CameraData` objects that describe multiple camera intrinsics and extrinsics.
+    """
+    hardcoded_cams = [{'name': 'Cam011', 'w': '870', 'h': '1022', 'rx': '3.621405502961905', 'ry': '-0.007217732617988849', 'rz': '-0.07128564910350631', 'tx': '0.16223773393442864', 'ty': '0.29387954499352065', 'tz': '2.4078490858217676', 'fx': '1.6709186729726866', 'fy': '1.3045395343074269', 'px': '0.5013477333233055', 'py': '0.49994617379852013'},
+                      {'name': 'Cam012', 'w': '888', 'h': '940', 'rx': '-5.216654624994702', 'ry': '0.024553674256727765', 'rz': '0.14314215740134242', 'tx': '-0.4000057231332983', 'ty': '0.7181807246046349', 'tz': '2.3934111749108085', 'fx': '1.6503508352032394', 'fy': '1.5908957826515941', 'px': '0.5021861706874694', 'py': '0.49576949396498815'},
+                      {'name': 'Cam013', 'w': '925', 'h': '735', 'rx': '4.138448841495705', 'ry': '-0.029206575469255775', 'rz': '0.060954254051468454', 'tx': '0.3175898870076602', 'ty': '0.8695226876502581', 'tz': '2.145382567849009', 'fx': '1.9201470768051816', 'fy': '1.8656596916928985', 'px': '0.5016769982487265', 'py': '0.5076824771233476'},
+                      {'name': 'Cam014', 'w': '746', 'h': '795', 'rx': '-3.3727680040569594', 'ry': '-0.04156916932833471', 'rz': '-0.16900689421625423', 'tx': '-0.05907628083304489', 'ty': '1.9767502388899016', 'tz': '2.120421932372801', 'fx': '1.586205078730376', 'fy': '3.067727554141795', 'px': '0.50586328294691', 'py': '0.5014064575146523'},
+                      {'name': 'Cam015', 'w': '977', 'h': '687', 'rx': '3.659297612280421', 'ry': '-0.011310346065601475', 'rz': '-0.18524507224703002', 'tx': '0.28158967119345596', 'ty': '1.1294590443413015', 'tz': '2.24610713760478', 'fx': '1.7524566113853368', 'fy': '2.285500282472767', 'px': '0.4981798202527454', 'py': '0.5073735263069437'},
+                      {'name': 'Cam016', 'w': '830', 'h': '1108', 'rx': '-1.678225496376341', 'ry': '-0.036204838316383464', 'rz': '-0.24480425200608624', 'tx': '-0.526598709914843', 'ty': '0.1984851014364546', 'tz': '2.1290209342566238', 'fx': '1.6049332402067225', 'fy': '2.724111317058074', 'px': '0.5123794911598912', 'py': '0.5004470691511821'},
+                      {'name': 'Cam017', 'w': '1088', 'h': '718', 'rx': '0.011396061025858245', 'ry': '0.017168331302112948', 'rz': '-0.35961459979910465', 'tx': '0.14642344971060656', 'ty': '1.5803346890159848', 'tz': '2.240771414898348', 'fx': '1.5822656890579718', 'fy': '2.50236223626876', 'px': '0.49928501224468363', 'py': '0.49714377889858424'},
+                      {'name': 'Cam018', 'w': '863', 'h': '800', 'rx': '0.7256933947522196', 'ry': '-0.04540087837030354', 'rz': '-0.004707886360442195', 'tx': '-0.4177828518797869', 'ty': '-0.5670545459300012', 'tz': '2.083118689137067', 'fx': '1.7394508636573656', 'fy': '1.6959323967944333', 'px': '0.5016526004662346', 'py': '0.4953854697719054'},
+                      {'name': 'Cam019', 'w': '935', 'h': '611', 'rx': '-1.325502293526586', 'ry': '0.004228124455538266', 'rz': '-0.3714890841407946', 'tx': '0.5161049229760789', 'ty': '0.6083999725558229', 'tz': '2.090698051644113', 'fx': '1.8667188052824653', 'fy': '1.785794997552897', 'px': '0.5025526190662141', 'py': '0.49698805925532336'}]
+    cameras = []
+    for camera_info in hardcoded_cams:
+        camera = CameraData(
+            name=camera_info["name"],
+            width=int(camera_info["w"]),
+            height=int(camera_info["h"]),
+            rotation_axisangle=np.array([float(camera_info["rx"]), float(camera_info["ry"]), float(camera_info["rz"])]),
+            translation=np.array([float(camera_info["tx"]), float(camera_info["ty"]), float(camera_info["tz"])]),
+            focal_length=np.array([float(camera_info["fx"]), float(camera_info["fy"])]),
+            principal_point=np.array([float(camera_info["px"]), float(camera_info["py"])]),
+        )
+        cameras.append(camera)
+    return cameras
+
+

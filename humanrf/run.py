@@ -11,6 +11,9 @@ from actorshq.dataset.data_loader import DataLoader
 from actorshq.dataset.trajectory import (
     get_trajectory_dataloader_from_calibration,
     get_trajectory_dataloader_from_keycams,
+    get_trajectory_dataloader_from_list,
+    get_trajectory_dataloader_from_calibration_orbited
+
 )
 from actorshq.dataset.volumetric_dataset import VolumetricDataset
 from actorshq.evaluation.evaluate import evaluate
@@ -141,8 +144,42 @@ if __name__ == "__main__":
         collect_and_free_memory()
 
     if config.test.trajectory_via_calibration_file is not None:
+      
+      if config.is_orbited:
+        trajectory_data_loader = get_trajectory_dataloader_from_calibration_orbited(
+          calibration_path=config.test.trajectory_via_calibration_file,
+          base_data_folder=data_folder,
+          device=config.device,
+          dataloader_output_mode=DataLoader.OutputMode.RAYS_AND_SAMPLES,
+          space_pruning_mode=DataLoader.SpacePruningMode.OCCUPANCY_GRID,
+          batch_size=config.test.rays_batch_size,
+          frame_numbers=frame_numbers,
+          num_samples= config.sample_number
+        )
+      else:
         trajectory_data_loader = get_trajectory_dataloader_from_calibration(
-            calibration_path=config.test.trajectory_via_calibration_file,
+          calibration_path=config.test.trajectory_via_calibration_file,
+          base_data_folder=data_folder,
+          device=config.device,
+          dataloader_output_mode=DataLoader.OutputMode.RAYS_AND_SAMPLES,
+          space_pruning_mode=DataLoader.SpacePruningMode.OCCUPANCY_GRID,
+          batch_size=config.test.rays_batch_size,
+          frame_numbers=frame_numbers,
+      )
+
+      trainer = Trainer(
+            config=config,
+            workspace=workspace,
+            checkpoint=config.test.checkpoint,
+            model=model,
+            optimizer=None,
+            lr_scheduler=None,
+        )
+      trainer.test(trajectory_data_loader, results_folder / "test_calibration_file", True)
+      collect_and_free_memory()
+
+    '''if config.test.trajectory_via_list:
+        trajectory_data_loader = get_trajectory_dataloader_from_list(
             base_data_folder=data_folder,
             device=config.device,
             dataloader_output_mode=DataLoader.OutputMode.RAYS_AND_SAMPLES,
@@ -159,9 +196,9 @@ if __name__ == "__main__":
             optimizer=None,
             lr_scheduler=None,
         )
-        trainer.test(trajectory_data_loader, results_folder / "test_calibration_file", True)
+        trainer.test(trajectory_data_loader, results_folder / "test_calibration_list", True)
         collect_and_free_memory()
-
+    '''
     if config.evaluate:
         if config.evaluation.frame_numbers is not None:
             frame_numbers = config.evaluation.frame_numbers

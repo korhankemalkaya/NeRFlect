@@ -2,9 +2,10 @@ import importlib
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List, Dict
 
 from simple_parsing import ArgumentGenerationMode, ArgumentParser, NestedMode, field
+from actorshq.dataset.camera_data import CameraData
 
 from humanrf.args.model_args import _model_args
 
@@ -107,6 +108,10 @@ class _run_args:
     train: bool
     # perform evaluation if true.
     evaluate: bool
+    # perform orbitation if true
+    is_orbited: bool
+    # indicates number of newly generated cameras
+    sample_number: int
     # the outputs and training progress will be saved in this local folder.
     workspace: Path
     # model-related parameters

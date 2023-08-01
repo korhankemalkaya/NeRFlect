@@ -4,9 +4,13 @@ frame_configs = presets.frame_configs["siggraph_interval_1"]
 
 config = [
     # fmt: off
-    "--train", "true",
-    "--evaluate", "true",
-    "--test.trajectory_via_keycams", "34", "126", "90",
+    "--train", "false",
+    "--evaluate", "false",
+    "--is_orbited", "true",
+    "--sample_number", "5000",
+
+    "--test.trajectory_via_calibration_file", "/content/gdrive/MyDrive/archive/Actor01/Sequence1/4x/calibration_2.csv",
+    "--test.checkpoint", "/content/gdrive/MyDrive/humanrf/home/zg296/humanrf/example_workspace/checkpoints/best.pth",
 
     "--model.log2_hashmap_size", "19",
     "--model.n_features_per_level", "2",
