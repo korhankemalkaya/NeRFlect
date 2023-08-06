@@ -3,7 +3,9 @@ from __future__ import annotations
 import csv
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List
+from typing import List, Optional
+from scipy.spatial.transform import Rotation as R
+
 
 import numpy as np
 
@@ -200,7 +202,88 @@ def axis_angle_from_rotation_matrix(rotation_matrix):
     z = (rotation_matrix[1, 0] - rotation_matrix[0, 1]) / (2 * np.sin(angle))
     return np.array([x, y, z]) * angle
 
-def read_calibration_orbited_csv(input_csv_path: Path, num_samples: int) -> List[CameraData]:
+
+def look_at_rotation_matrix(look_at_vector):
+    # Normalize the look_at_vector
+    z_axis = -look_at_vector / np.linalg.norm(look_at_vector)
+    
+    # Assuming the up-vector is (0, 1, 0)
+    x_axis = np.cross(np.array([0, 1, 0]), z_axis)
+    x_axis /= np.linalg.norm(x_axis)
+    
+    # Compute the orthogonal up-vector
+    y_axis = np.cross(z_axis, x_axis)
+
+    # Construct the rotation matrix
+    rotation_matrix = np.stack([x_axis, y_axis, z_axis], axis=-1)
+    
+    return rotation_matrix
+
+def rotation_matrix(angle: float, axis: str) -> np.array:
+    """
+    Creates a 3x3 rotation matrix for a rotation about the specified axis.
+
+    Args:
+        angle (float): The rotation angle in radians.
+        axis (str): The rotation axis ('x', 'y', or 'z').
+
+    Returns:
+        np.array: The rotation matrix.
+    """
+    if axis == 'x':
+        return np.array([
+            [1, 0, 0],
+            [0, np.cos(angle), -np.sin(angle)],
+            [0, np.sin(angle), np.cos(angle)],
+        ])
+    elif axis == 'y':
+        return np.array([
+            [np.cos(angle), 0, np.sin(angle)],
+            [0, 1, 0],
+            [-np.sin(angle), 0, np.cos(angle)],
+        ])
+    elif axis == 'z':
+        return np.array([
+            [np.cos(angle), -np.sin(angle), 0],
+            [np.sin(angle), np.cos(angle), 0],
+            [0, 0, 1],
+        ])
+
+def rotation_matrix_to_axisangle(rotation: np.array) -> np.array:
+    """
+    Converts a 3x3 rotation matrix to an axis-angle representation.
+
+    Args:
+        rotation (np.array): The rotation matrix.
+
+    Returns:
+        np.array: The rotation axis-angle.
+    """
+    # This is a simplified conversion that only works for rotations about the y-axis
+    angle = np.arccos(rotation[0, 0])
+    return np.array([0, angle, 0])
+
+def look_at(camera_position, look_at_point, up=np.array([0, 1, 0])):
+    """Generate a rotation matrix for a camera that looks at a point.
+
+    Args:
+        camera_position (np.array): The 3D position of the camera.
+        look_at_point (np.array): The 3D point that the camera is looking at.
+        up (np.array, optional): The up direction. Defaults to np.array([0, 1, 0]).
+
+    Returns:
+        np.array: A 3x3 rotation matrix.
+    """
+    forward = (look_at_point - camera_position)
+    forward /= np.linalg.norm(forward)
+    right = np.cross(up, forward)
+    right /= np.linalg.norm(right)
+    actual_up = np.cross(forward, right)
+    return np.stack([right, actual_up, forward], axis=-1)
+
+
+def read_calibration_orbited_csv(input_csv_path: Path, num_samples: int,  object_center: Optional[np.array] = None, up: Optional[np.array] = None,
+                                ) -> List[CameraData]:
     """Read camera intrinsics and extrinsics from a calibration CSV file.
 
     Args:
@@ -210,38 +293,36 @@ def read_calibration_orbited_csv(input_csv_path: Path, num_samples: int) -> List
     Returns:
         List[CameraData]: A list of `CameraData` objects that describe multiple camera intrinsics and extrinsics and orbited ones. 
     """
+    if object_center is None:
+        object_center = np.array([0, 0, 0])
+    if up is None:
+        up = np.array([0, -1, 0])
+
     csv_cameras = read_calibration_csv(input_csv_path)
     cameras = []
-    angle_step = 2 * np.pi / num_samples
+    angles = np.linspace(0, 2 * np.pi, num_samples, endpoint=False)
     
     for curr_camera in csv_cameras:
       cameras.append(curr_camera)
-      for i in range(num_samples - 1 ):
-        angle = i * angle_step
 
-        # Create a rotation matrix for the orbit
-        orbit_rotation = rotation_matrix_from_axis_angle(np.array([0, angle, 0]))
-        # Convert the camera's rotation into a rotation matrix
-        camera_rotation = rotation_matrix_from_axis_angle(curr_camera.rotation_axisangle)
-        # Apply the orbit rotation to the camera
-        new_rotation_matrix = np.dot(orbit_rotation, camera_rotation)
+      for i, angle in enumerate(angles):
+        radius = 3/2* np.linalg.norm(curr_camera.translation - object_center)
+        camera_position = object_center + radius * np.array([np.cos(angle), 0, np.sin(angle)])
+        camera_position[1] += radius / 2    # Adjust the object center
+        #camera_position[2] += radius / 2  # Adjust the object center
+        #camera_position[0] += radius / 2  # Adjust the object center
 
-        # Convert the new rotation back into axis-angle representation
-        new_rotation_axisangle = axis_angle_from_rotation_matrix(new_rotation_matrix)
-
-        # Rotate the camera's position for the orbit
-        new_translation = np.dot(orbit_rotation, curr_camera.translation)
+        rotation_matrix = look_at(camera_position, object_center, up)      
 
         new_camera = CameraData(
             name=f"{curr_camera.name}_orbit_{i}",
-            width=curr_camera.width,
-            height=curr_camera.height,
-            rotation_axisangle=new_rotation_axisangle,
-            translation=new_translation,
-            focal_length=curr_camera.focal_length,
-            principal_point=curr_camera.principal_point,
+            width = curr_camera.width,
+            height = curr_camera.height,
+            rotation_axisangle = Rotation.from_matrix(rotation_matrix).as_rotvec(),
+            translation = camera_position,
+            focal_length = curr_camera.focal_length.copy(),
+            principal_point = curr_camera.principal_point.copy(),
         )
-
         cameras.append(new_camera)
     return cameras
 
