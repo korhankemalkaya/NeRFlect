@@ -220,7 +220,7 @@ def get_trajectory_dataloader_from_calibration_orbited(
     num_samples: int,
 ) -> DataLoader:
 
-  cameras = read_calibration_orbited_csv(calibration_path, num_samples)          
+  cameras = read_calibration_orbited_csv(calibration_path, VolumetricDatasetFilepaths(base_data_folder).calibration_path, num_samples)          
   with TemporaryDirectory() as tmpdir:
     tmp_calibration_path = Path(tmpdir) / "calibration.csv"
     write_calibration_csv(cameras, tmp_calibration_path)

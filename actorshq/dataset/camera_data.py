@@ -8,6 +8,7 @@ from scipy.spatial.transform import Rotation as R
 
 
 import numpy as np
+import pandas as pd
 
 try:
     # If this file is imported via blender, we can't use `scipy`
@@ -281,18 +282,34 @@ def look_at(camera_position, look_at_point, up=np.array([0, 1, 0])):
     actual_up = np.cross(forward, right)
     return np.stack([right, actual_up, forward], axis=-1)
 
+def compute_object_center(input_csv_path: Path) -> np.array:
+  """Compute the object center based on the average of camera positions.
 
-def read_calibration_orbited_csv(input_csv_path: Path, num_samples: int,  object_center: Optional[np.array] = None, up: Optional[np.array] = None,
+    Args:
+        input_csv_path (Path): Path to a CSV file that contains camera calibration data.
+
+    Returns:
+        np.array: A 3D point representing the estimated object center.
+    """
+  calibration_data = pd.read_csv(input_csv_path)
+  translations = calibration_data[['tx', 'ty', 'tz']].values
+  center = translations.mean(axis=0)
+  return center
+
+def read_calibration_orbited_csv(input_csv_path: Path, actual_cameras_path: Path, num_samples: int, up: Optional[np.array] = None,
                                 ) -> List[CameraData]:
     """Read camera intrinsics and extrinsics from a calibration CSV file.
 
     Args:
         input_csv_path (Path): Path to a CSV file that contains camera calibration data.
+        actual_cameras_path (Path): Path to a CSV file that contains real camera calibration data to calculate the center of the object.
         num_samples (int): Number of sampled cameras in the orbit
 
     Returns:
         List[CameraData]: A list of `CameraData` objects that describe multiple camera intrinsics and extrinsics and orbited ones. 
     """
+    object_center = compute_object_center(actual_cameras_path)
+    print("Object center is at ", object_center[0],object_center[1],object_center[2])
     if object_center is None:
         object_center = np.array([0, 0, 0])
     if up is None:
@@ -306,11 +323,8 @@ def read_calibration_orbited_csv(input_csv_path: Path, num_samples: int,  object
       cameras.append(curr_camera)
 
       for i, angle in enumerate(angles):
-        radius = 3/2* np.linalg.norm(curr_camera.translation - object_center)
-        camera_position = object_center + radius * np.array([np.cos(angle), 0, np.sin(angle)])
-        camera_position[1] += radius / 2    # Adjust the object center
-        #camera_position[2] += radius / 2  # Adjust the object center
-        #camera_position[0] += radius / 2  # Adjust the object center
+        radius = np.linalg.norm(curr_camera.translation - object_center)
+        camera_position = object_center + radius * np.array([np.cos(angle), 0, np.sin(angle)])       
 
         rotation_matrix = look_at(camera_position, object_center, up)      
 
