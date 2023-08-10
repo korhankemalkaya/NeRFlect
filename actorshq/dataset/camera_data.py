@@ -264,7 +264,7 @@ def rotation_matrix_to_axisangle(rotation: np.array) -> np.array:
     angle = np.arccos(rotation[0, 0])
     return np.array([0, angle, 0])
 
-def look_at(camera_position, look_at_point, up=np.array([0, 1, 0])):
+def look_at(camera_position, look_at_point, up=np.array([0, -1, 0])):
     """Generate a rotation matrix for a camera that looks at a point.
 
     Args:
@@ -281,6 +281,34 @@ def look_at(camera_position, look_at_point, up=np.array([0, 1, 0])):
     right /= np.linalg.norm(right)
     actual_up = np.cross(forward, right)
     return np.stack([right, actual_up, forward], axis=-1)
+
+def look_at_2(camera_position, look_at_point, up=np.array([0, -1, 0])):
+    """Generate a rotation matrix for a camera that looks at a point.
+
+    Args:
+        camera_position (np.array): The 3D position of the camera.
+        look_at_point (np.array): The 3D point that the camera is looking at.
+        up (np.array, optional): The up direction in RDF convention. Defaults to np.array([0, -1, 0]).
+
+    Returns:
+        np.array: A 3x3 rotation matrix.
+    """
+    # Compute the forward vector (camera should look in this direction)
+    forward = (look_at_point - camera_position)
+    forward /= np.linalg.norm(forward)  # Normalize
+
+    # Compute the right vector
+    right = np.cross(forward, up)
+    right /= np.linalg.norm(right)  # Normalize
+
+    # Compute the actual up vector (down in RDF convention)
+    actual_down = np.cross(right, forward)
+    actual_down /= np.linalg.norm(actual_down)  # Normalize
+
+    # Construct the rotation matrix in RDF convention
+    rotation_matrix = np.stack([right, actual_down, forward], axis=-1)
+
+    return rotation_matrix
 
 def compute_object_center(input_csv_path: Path) -> np.array:
   """Compute the object center based on the average of camera positions.
@@ -309,21 +337,33 @@ def read_calibration_orbited_csv(input_csv_path: Path, actual_cameras_path: Path
         List[CameraData]: A list of `CameraData` objects that describe multiple camera intrinsics and extrinsics and orbited ones. 
     """
     object_center = compute_object_center(actual_cameras_path)
-    radius = compute_average_radius(actual_cameras_path, object_center)
 
     if object_center is None:
         object_center = np.array([0, 0, 0])
-    if up is None:
-        up = np.array([0, -1, 0])
+    
+    #Global up direction in RDF convention
+    up = np.array([0, -1, 0])
 
     csv_cameras = read_calibration_csv(input_csv_path)
     cameras = []
     angles = np.linspace(0, 2 * np.pi, num_samples, endpoint=False)
+    print("Object center is ", object_center)
+
     for curr_camera in csv_cameras:
+      print(curr_camera.name) 
       cameras.append(curr_camera)
+      
+
+      look_at_point = np.array([object_center[0], curr_camera.translation[1], object_center[2]])
+      radius = np.linalg.norm(curr_camera.translation - look_at_point)
+
       for i, angle in enumerate(angles):
-        camera_position = object_center + radius * np.array([np.cos(angle), 0, np.sin(angle)])       
-        rotation_matrix = look_at(camera_position, object_center, up)      
+        camera_position = look_at_point + radius * np.array([np.cos(angle), 0, np.sin(angle)])       
+        if (curr_camera.translation[1] > 2* object_center[1] or curr_camera.translation[1] < 0 ):
+          rotation_matrix = look_at(camera_position, object_center, up)
+        else:
+          rotation_matrix = look_at(camera_position, look_at_point, up)
+
 
         new_camera = CameraData(
             name=f"{curr_camera.name}_orbit_{i}",

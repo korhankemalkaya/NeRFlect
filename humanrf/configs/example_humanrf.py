@@ -7,12 +7,12 @@ config = [
     "--train", "false",
     "--evaluate", "false",
 
-    "--is_orbited", "false",
-    "--is_uniformed", "true",
-    "--sample_number", "500",
-    "--sphere_radius", "5",
+    "--is_orbited", "true",
+    "--is_uniformed", "false",
+    "--sample_number", "100",
+    #"--sphere_radius", "5",
 
-    "--test.trajectory_via_calibration_file", "/content/gdrive/MyDrive/archive/Actor01/Sequence1/4x/calibrationtest.csv",
+    "--test.trajectory_via_calibration_file", "/content/gdrive/MyDrive/archive/Actor01/Sequence1/4x/calibrat.csv",
     "--test.checkpoint", "/content/gdrive/MyDrive/HumanRF/example_workspace/checkpoints/best.pth",
 
     "--model.log2_hashmap_size", "19",
