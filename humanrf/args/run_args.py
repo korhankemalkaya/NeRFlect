@@ -110,7 +110,9 @@ class _run_args:
     evaluate: bool
     # perform orbitation if true
     is_orbited: bool
-    # indicates number of newly generated cameras
+    # perform uniformly sampling if true
+    is_uniformed: bool
+    # indicates the number of newly generated cameras
     sample_number: int
     # the outputs and training progress will be saved in this local folder.
     workspace: Path
@@ -124,6 +126,8 @@ class _run_args:
     evaluation: _evaluation_args
     # dataset-related parameters
     dataset: _dataset_args
+    # indicates the radius of sphere if is_uniformed
+    sphere_radius: Optional[float] = None
     # name of the config file (without .py extension) residing under configs/
     config: Optional[str] = None
     # random seed for any source of random numbers.

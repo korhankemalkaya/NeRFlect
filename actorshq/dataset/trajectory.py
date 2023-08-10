@@ -4,7 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Tuple, List
 
-from actorshq.dataset.camera_data import read_calibration_csv, read_calibration_orbited_csv, write_calibration_csv, read_calibration_list, CameraData
+from actorshq.dataset.camera_data import read_calibration_csv, read_calibration_orbited_csv, write_calibration_csv, read_calibration_list, CameraData, read_calibration_uniformed_csv
 from actorshq.dataset.data_loader import DataLoader
 from actorshq.dataset.generate_camera_trajectory import generate_camera_trajectory
 from actorshq.dataset.volumetric_dataset import VolumetricDataset, VolumetricDatasetFilepaths
@@ -221,6 +221,34 @@ def get_trajectory_dataloader_from_calibration_orbited(
 ) -> DataLoader:
 
   cameras = read_calibration_orbited_csv(calibration_path, VolumetricDatasetFilepaths(base_data_folder).calibration_path, num_samples)          
+  with TemporaryDirectory() as tmpdir:
+    tmp_calibration_path = Path(tmpdir) / "calibration.csv"
+    write_calibration_csv(cameras, tmp_calibration_path)
+
+    return get_trajectory_dataloader_from_calibration(
+      calibration_path=tmp_calibration_path,
+      base_data_folder=base_data_folder,
+      device=device,
+      dataloader_output_mode=dataloader_output_mode,
+      space_pruning_mode=space_pruning_mode,
+      batch_size=batch_size,
+      frame_numbers=frame_numbers,
+    )
+
+
+def get_trajectory_dataloader_from_calibration_uniformed(
+    calibration_path: Path,
+    base_data_folder: Path,
+    device: str,
+    dataloader_output_mode: DataLoader.OutputMode,
+    space_pruning_mode: DataLoader.SpacePruningMode,
+    batch_size: int,
+    frame_numbers: Tuple[int, ...],
+    num_samples: int,
+    radius: float = None,
+) -> DataLoader:
+
+  cameras = read_calibration_uniformed_csv(calibration_path, VolumetricDatasetFilepaths(base_data_folder).calibration_path, num_samples, radius)          
   with TemporaryDirectory() as tmpdir:
     tmp_calibration_path = Path(tmpdir) / "calibration.csv"
     write_calibration_csv(cameras, tmp_calibration_path)

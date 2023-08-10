@@ -6,11 +6,14 @@ config = [
     # fmt: off
     "--train", "false",
     "--evaluate", "false",
-    "--is_orbited", "yes",
-    "--sample_number", "350",
-    #"--test.trajectory_via_keycams", "20", "126", "90",
+
+    "--is_orbited", "false",
+    "--is_uniformed", "true",
+    "--sample_number", "500",
+    "--sphere_radius", "5",
+
     "--test.trajectory_via_calibration_file", "/content/gdrive/MyDrive/archive/Actor01/Sequence1/4x/calibrationtest.csv",
-    "--test.checkpoint", "/content/gdrive/MyDrive/humanrf/home/zg296/humanrf/example_workspace/checkpoints/best.pth",
+    "--test.checkpoint", "/content/gdrive/MyDrive/HumanRF/example_workspace/checkpoints/best.pth",
 
     "--model.log2_hashmap_size", "19",
     "--model.n_features_per_level", "2",

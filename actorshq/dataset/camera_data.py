@@ -296,7 +296,7 @@ def compute_object_center(input_csv_path: Path) -> np.array:
   center = translations.mean(axis=0)
   return center
 
-def read_calibration_orbited_csv(input_csv_path: Path, actual_cameras_path: Path, num_samples: int, up: Optional[np.array] = None,
+def read_calibration_orbited_csv(input_csv_path: Path, actual_cameras_path: Path, num_samples: int, 
                                 ) -> List[CameraData]:
     """Read camera intrinsics and extrinsics from a calibration CSV file.
 
@@ -309,7 +309,8 @@ def read_calibration_orbited_csv(input_csv_path: Path, actual_cameras_path: Path
         List[CameraData]: A list of `CameraData` objects that describe multiple camera intrinsics and extrinsics and orbited ones. 
     """
     object_center = compute_object_center(actual_cameras_path)
-    print("Object center is at ", object_center[0],object_center[1],object_center[2])
+    radius = compute_average_radius(actual_cameras_path, object_center)
+
     if object_center is None:
         object_center = np.array([0, 0, 0])
     if up is None:
@@ -318,14 +319,10 @@ def read_calibration_orbited_csv(input_csv_path: Path, actual_cameras_path: Path
     csv_cameras = read_calibration_csv(input_csv_path)
     cameras = []
     angles = np.linspace(0, 2 * np.pi, num_samples, endpoint=False)
-    
     for curr_camera in csv_cameras:
       cameras.append(curr_camera)
-
       for i, angle in enumerate(angles):
-        radius = np.linalg.norm(curr_camera.translation - object_center)
         camera_position = object_center + radius * np.array([np.cos(angle), 0, np.sin(angle)])       
-
         rotation_matrix = look_at(camera_position, object_center, up)      
 
         new_camera = CameraData(
@@ -338,6 +335,81 @@ def read_calibration_orbited_csv(input_csv_path: Path, actual_cameras_path: Path
             principal_point = curr_camera.principal_point.copy(),
         )
         cameras.append(new_camera)
+    return cameras
+
+def compute_average_radius(calibration_data_path: Path, object_center: np.array) -> float:
+    """Compute the average radius based on the distances of camera positions to the object center.
+
+    Args:
+        calibration_data (pd.DataFrame): DataFrame containing camera calibration data.
+        object_center (np.array): A 3D point representing the estimated object center.
+
+    Returns:
+        float: The average radius.
+    """
+    calibration_data = pd.read_csv(calibration_data_path)
+    camera_positions = calibration_data[['tx', 'ty', 'tz']].values
+    distances = np.linalg.norm(camera_positions - object_center, axis=1)
+    average_radius = distances.mean()
+    return average_radius
+
+def read_calibration_uniformed_csv(input_csv_path: Path, actual_cameras_path: Path, num_samples: int, radius: Optional[float] = None,
+                                ) -> List[CameraData]:
+    """Read camera intrinsics and extrinsics from a calibration CSV file.
+
+    Args:
+        input_csv_path (Path): Path to a CSV file that contains camera calibration data.
+        actual_cameras_path (Path): Path to a CSV file that contains real camera calibration data to calculate the center of the object.
+        num_samples (int): Number of sampled cameras in the orbit
+        radius (float): Radius of the sphere on which sampling will be done.
+    Returns:
+        List[CameraData]: A list of `CameraData` objects that describe multiple camera intrinsics and extrinsics and uniformed ones. 
+    """
+    object_center = compute_object_center(actual_cameras_path)
+    if object_center is None:
+        object_center = np.array([0, 0, 0])
+
+    if radius is None:
+      radius = compute_average_radius(actual_cameras_path, object_center)
+
+    #Global up direction in RDF convention
+    up = np.array([0, -1, 0])
+
+    csv_cameras = read_calibration_csv(input_csv_path)
+    cameras = []
+    phi_values = np.linspace(0, np.pi, int(np.sqrt(num_samples)))  # Polar angle
+    theta_values = np.linspace(0, 2 * np.pi, int(num_samples / len(phi_values)))  # Azimuthal angle
+
+
+    commmon_width=csv_cameras[0].width
+    common_height=csv_cameras[0].height
+    common_focal_length=csv_cameras[0].focal_length.copy()
+    common_principal_point=csv_cameras[0].principal_point.copy()
+
+    for phi in phi_values:
+        for theta in theta_values:
+            # Convert spherical coordinates to Cartesian coordinates
+            x = object_center[0] + radius * np.sin(phi) * np.cos(theta)
+            y = object_center[1] + radius * np.sin(phi) * np.sin(theta)
+            z = object_center[2] + radius * np.cos(phi)
+            camera_position = np.array([x, y, z])
+
+            # Compute rotation matrix using the look_at function
+            rotation_matrix = look_at(camera_position, object_center, up) 
+
+            
+            # Create CameraData object for the sampled camera
+            camera = CameraData(
+                name=f"CamSphere_{len(cameras) + 1}",
+                width= commmon_width,
+                height= common_height,
+                rotation_axisangle=Rotation.from_matrix(rotation_matrix).as_rotvec(),
+                translation=camera_position,
+                focal_length=common_focal_length,
+                principal_point=common_principal_point,
+            )
+            cameras.append(camera)
+
     return cameras
 
 

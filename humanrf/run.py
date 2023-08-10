@@ -12,7 +12,8 @@ from actorshq.dataset.trajectory import (
     get_trajectory_dataloader_from_calibration,
     get_trajectory_dataloader_from_keycams,
     get_trajectory_dataloader_from_list,
-    get_trajectory_dataloader_from_calibration_orbited
+    get_trajectory_dataloader_from_calibration_orbited,
+    get_trajectory_dataloader_from_calibration_uniformed
 
 )
 from actorshq.dataset.volumetric_dataset import VolumetricDataset
@@ -145,7 +146,7 @@ if __name__ == "__main__":
 
     if config.test.trajectory_via_calibration_file is not None:
       
-      if config.is_orbited:
+      if config.is_orbited and not config.is_uniformed:
         trajectory_data_loader = get_trajectory_dataloader_from_calibration_orbited(
           calibration_path=config.test.trajectory_via_calibration_file,
           base_data_folder=data_folder,
@@ -156,6 +157,18 @@ if __name__ == "__main__":
           frame_numbers=frame_numbers,
           num_samples= config.sample_number
         )
+      elif config.is_uniformed and not config.is_orbited:
+        trajectory_data_loader = get_trajectory_dataloader_from_calibration_uniformed(
+          calibration_path=config.test.trajectory_via_calibration_file,
+          base_data_folder=data_folder,
+          device=config.device,
+          dataloader_output_mode=DataLoader.OutputMode.RAYS_AND_SAMPLES,
+          space_pruning_mode=DataLoader.SpacePruningMode.OCCUPANCY_GRID,
+          batch_size=config.test.rays_batch_size,
+          frame_numbers=frame_numbers,
+          num_samples= config.sample_number,
+          radius = config.sphere_radius
+        )
       else:
         trajectory_data_loader = get_trajectory_dataloader_from_calibration(
           calibration_path=config.test.trajectory_via_calibration_file,
@@ -165,7 +178,7 @@ if __name__ == "__main__":
           space_pruning_mode=DataLoader.SpacePruningMode.OCCUPANCY_GRID,
           batch_size=config.test.rays_batch_size,
           frame_numbers=frame_numbers,
-      )
+        )
 
       trainer = Trainer(
             config=config,
