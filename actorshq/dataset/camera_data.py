@@ -185,85 +185,6 @@ def read_calibration_csv(input_csv_path: Path) -> List[CameraData]:
             cameras.append(camera)
     return cameras
 
-def rotation_matrix_from_axis_angle(axis_angle):
-    """Convert an axis-angle rotation into a rotation matrix."""
-    angle = np.linalg.norm(axis_angle)
-    axis = axis_angle / angle
-    a = np.cos(angle / 2)
-    b, c, d = -axis * np.sin(angle / 2)
-    return np.array([[a*a+b*b-c*c-d*d, 2*(b*c-a*d), 2*(b*d+a*c)],
-                     [2*(b*c+a*d), a*a+c*c-b*b-d*d, 2*(c*d-a*b)],
-                     [2*(b*d-a*c), 2*(c*d+a*b), a*a+d*d-b*b-c*c]])
-
-def axis_angle_from_rotation_matrix(rotation_matrix):
-    """Convert a rotation matrix into an axis-angle representation."""
-    angle = np.arccos((np.trace(rotation_matrix) - 1) / 2)
-    x = (rotation_matrix[2, 1] - rotation_matrix[1, 2]) / (2 * np.sin(angle))
-    y = (rotation_matrix[0, 2] - rotation_matrix[2, 0]) / (2 * np.sin(angle))
-    z = (rotation_matrix[1, 0] - rotation_matrix[0, 1]) / (2 * np.sin(angle))
-    return np.array([x, y, z]) * angle
-
-
-def look_at_rotation_matrix(look_at_vector):
-    # Normalize the look_at_vector
-    z_axis = -look_at_vector / np.linalg.norm(look_at_vector)
-    
-    # Assuming the up-vector is (0, 1, 0)
-    x_axis = np.cross(np.array([0, 1, 0]), z_axis)
-    x_axis /= np.linalg.norm(x_axis)
-    
-    # Compute the orthogonal up-vector
-    y_axis = np.cross(z_axis, x_axis)
-
-    # Construct the rotation matrix
-    rotation_matrix = np.stack([x_axis, y_axis, z_axis], axis=-1)
-    
-    return rotation_matrix
-
-def rotation_matrix(angle: float, axis: str) -> np.array:
-    """
-    Creates a 3x3 rotation matrix for a rotation about the specified axis.
-
-    Args:
-        angle (float): The rotation angle in radians.
-        axis (str): The rotation axis ('x', 'y', or 'z').
-
-    Returns:
-        np.array: The rotation matrix.
-    """
-    if axis == 'x':
-        return np.array([
-            [1, 0, 0],
-            [0, np.cos(angle), -np.sin(angle)],
-            [0, np.sin(angle), np.cos(angle)],
-        ])
-    elif axis == 'y':
-        return np.array([
-            [np.cos(angle), 0, np.sin(angle)],
-            [0, 1, 0],
-            [-np.sin(angle), 0, np.cos(angle)],
-        ])
-    elif axis == 'z':
-        return np.array([
-            [np.cos(angle), -np.sin(angle), 0],
-            [np.sin(angle), np.cos(angle), 0],
-            [0, 0, 1],
-        ])
-
-def rotation_matrix_to_axisangle(rotation: np.array) -> np.array:
-    """
-    Converts a 3x3 rotation matrix to an axis-angle representation.
-
-    Args:
-        rotation (np.array): The rotation matrix.
-
-    Returns:
-        np.array: The rotation axis-angle.
-    """
-    # This is a simplified conversion that only works for rotations about the y-axis
-    angle = np.arccos(rotation[0, 0])
-    return np.array([0, angle, 0])
-
 def look_at(camera_position, look_at_point, up=np.array([0, -1, 0])):
     """Generate a rotation matrix for a camera that looks at a point.
 
@@ -282,33 +203,6 @@ def look_at(camera_position, look_at_point, up=np.array([0, -1, 0])):
     actual_up = np.cross(forward, right)
     return np.stack([right, actual_up, forward], axis=-1)
 
-def look_at_2(camera_position, look_at_point, up=np.array([0, -1, 0])):
-    """Generate a rotation matrix for a camera that looks at a point.
-
-    Args:
-        camera_position (np.array): The 3D position of the camera.
-        look_at_point (np.array): The 3D point that the camera is looking at.
-        up (np.array, optional): The up direction in RDF convention. Defaults to np.array([0, -1, 0]).
-
-    Returns:
-        np.array: A 3x3 rotation matrix.
-    """
-    # Compute the forward vector (camera should look in this direction)
-    forward = (look_at_point - camera_position)
-    forward /= np.linalg.norm(forward)  # Normalize
-
-    # Compute the right vector
-    right = np.cross(forward, up)
-    right /= np.linalg.norm(right)  # Normalize
-
-    # Compute the actual up vector (down in RDF convention)
-    actual_down = np.cross(right, forward)
-    actual_down /= np.linalg.norm(actual_down)  # Normalize
-
-    # Construct the rotation matrix in RDF convention
-    rotation_matrix = np.stack([right, actual_down, forward], axis=-1)
-
-    return rotation_matrix
 
 def compute_object_center(input_csv_path: Path) -> np.array:
   """Compute the object center based on the average of camera positions.
@@ -347,12 +241,11 @@ def read_calibration_orbited_csv(input_csv_path: Path, actual_cameras_path: Path
     csv_cameras = read_calibration_csv(input_csv_path)
     cameras = []
     angles = np.linspace(0, 2 * np.pi, num_samples, endpoint=False)
-    print("Object center is ", object_center)
 
     for curr_camera in csv_cameras:
-      print(curr_camera.name) 
-      cameras.append(curr_camera)
-      
+
+      #Can be commented out if the input camera's image is wanted.
+      #cameras.append(curr_camera) 
 
       look_at_point = np.array([object_center[0], curr_camera.translation[1], object_center[2]])
       radius = np.linalg.norm(curr_camera.translation - look_at_point)
@@ -420,13 +313,8 @@ def read_calibration_uniformed_csv(input_csv_path: Path, actual_cameras_path: Pa
     phi_values = np.linspace(0, np.pi, int(np.sqrt(num_samples)))  # Polar angle
     theta_values = np.linspace(0, 2 * np.pi, int(num_samples / len(phi_values)))  # Azimuthal angle
 
-
-    commmon_width=csv_cameras[0].width
-    common_height=csv_cameras[0].height
-    common_focal_length=csv_cameras[0].focal_length.copy()
-    common_principal_point=csv_cameras[0].principal_point.copy()
-
-    for phi in phi_values:
+    for curr_camera in csv_cameras:
+      for phi in phi_values:
         for theta in theta_values:
             # Convert spherical coordinates to Cartesian coordinates
             x = object_center[0] + radius * np.sin(phi) * np.cos(theta)
@@ -437,16 +325,15 @@ def read_calibration_uniformed_csv(input_csv_path: Path, actual_cameras_path: Pa
             # Compute rotation matrix using the look_at function
             rotation_matrix = look_at(camera_position, object_center, up) 
 
-            
             # Create CameraData object for the sampled camera
             camera = CameraData(
                 name=f"CamSphere_{len(cameras) + 1}",
-                width= commmon_width,
-                height= common_height,
+                width= curr_camera.width,
+                height= curr_camera.height,
                 rotation_axisangle=Rotation.from_matrix(rotation_matrix).as_rotvec(),
                 translation=camera_position,
-                focal_length=common_focal_length,
-                principal_point=common_principal_point,
+                focal_length=curr_camera.focal_length,
+                principal_point=curr_camera.focal_length,
             )
             cameras.append(camera)
 
