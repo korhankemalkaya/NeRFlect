@@ -1,5 +1,7 @@
 import importlib
 import sys
+import os
+import csv
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Tuple, List, Dict
@@ -101,6 +103,64 @@ class _dataset_args:
     # indicates the number of distinct frames that could exist in the pool from which the rays are sampled.
     max_num_frames_per_batch: int = 8
 
+def _generate_temp_csv():
+  # Create directory if it doesn't exist
+  directory = "temp_input"
+  if not os.path.exists(directory):
+      os.makedirs(directory)
+
+  csv_file_path = os.path.join(directory, 'calibration.csv')
+
+  with open(csv_file_path, 'w', newline='') as csvfile:
+      writer = csv.DictWriter(csvfile, fieldnames=['name', 'w', 'h', 'rx', 'ry', 'rz', 'tx', 'ty', 'tz', 'fx', 'fy', 'px', 'py'])
+      writer.writeheader()
+
+      try:
+        while True:  # Keep collecting data until an exception is raised (manual interruption)
+          name = input("Enter name (string): ")
+          while not isinstance(name, str) or not name:  # Ensure non-empty string is provided
+            print("Invalid input. Please enter a valid string for name.")
+            name = input("Enter name (string): ")     
+          w = int(input("Enter w (int): "))
+          h = int(input("Enter h (int): "))
+          rx = float(input("Enter rx (float): "))
+          ry = float(input("Enter ry (float): "))
+          rz = float(input("Enter rz (float): "))
+          tx = float(input("Enter tx (float): "))
+          ty = float(input("Enter ty (float): "))
+          tz = float(input("Enter tz (float): "))
+          fx = float(input("Enter fx (float): "))
+          fy = float(input("Enter fy (float): "))
+          px = float(input("Enter px (float): "))
+          py = float(input("Enter py (float): "))
+
+          writer.writerow({'name': name, 'w': w, 'h': h, 'rx': rx, 'ry': ry, 'rz': rz, 
+                            'tx': tx, 'ty': ty, 'tz': tz, 'fx': fx, 'fy': fy, 'px': px, 'py': py})
+
+          cont = input("Would you like to enter another record? (yes/no) ").lower()
+          if cont != 'yes':
+              break
+      except KeyboardInterrupt:
+          # Handling manual interruption to stop collecting data
+          pass
+  return csv_file_path
+
+def int_input(prompt: str) -> int:
+    """Utility function to get integer input."""
+    while True:
+        try:
+            return int(input(prompt))
+        except ValueError:
+            print("Invalid input. Please enter a valid integer.")
+
+def float_input(prompt: str) -> float:
+    """Utility function to get float input."""
+    while True:
+        try:
+            return float(input(prompt))
+        except ValueError:
+            print("Invalid input. Please enter a valid float.")
+
 
 @dataclass
 class _run_args:
@@ -126,6 +186,8 @@ class _run_args:
     evaluation: _evaluation_args
     # dataset-related parameters
     dataset: _dataset_args
+    # indicates whether calibration arguments are given by user manually
+    is_manual: Optional[bool] = False
     # indicates the radius of sphere if is_uniformed
     sphere_radius: Optional[float] = None
     # name of the config file (without .py extension) residing under configs/
@@ -147,5 +209,11 @@ def parse_args() -> _run_args:
 
     parser = ArgumentParser(argument_generation_mode=ArgumentGenerationMode.NESTED, nested_mode=NestedMode.WITHOUT_ROOT)
     parser.add_arguments(_run_args, dest="args")
+    # Parse arguments and store in 'args'
+    args = parser.parse_args().args
+    # Check if 'is_manual' is set to True and if so, generate the CSV.
+    if getattr(args, 'is_manual', False):  # using getattr to ensure backwards compatibility in case is_manual is not set
+        temp_csv_path = _generate_temp_csv()
+        args.test.trajectory_via_calibration_file = temp_csv_path
 
-    return parser.parse_args().args
+    return args
