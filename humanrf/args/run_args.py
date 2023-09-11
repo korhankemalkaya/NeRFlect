@@ -103,7 +103,7 @@ class _dataset_args:
     # indicates the number of distinct frames that could exist in the pool from which the rays are sampled.
     max_num_frames_per_batch: int = 8
 
-def _generate_temp_csv():
+def _generate_temp_csv(camera_parameters: str):
   # Create directory if it doesn't exist
   directory = "temp_input"
   if not os.path.exists(directory):
@@ -115,51 +115,32 @@ def _generate_temp_csv():
       writer = csv.DictWriter(csvfile, fieldnames=['name', 'w', 'h', 'rx', 'ry', 'rz', 'tx', 'ty', 'tz', 'fx', 'fy', 'px', 'py'])
       writer.writeheader()
 
-      try:
-        while True:  # Keep collecting data until an exception is raised (manual interruption)
-          name = input("Enter name (string): ")
-          while not isinstance(name, str) or not name:  # Ensure non-empty string is provided
-            print("Invalid input. Please enter a valid string for name.")
-            name = input("Enter name (string): ")     
-          w = int(input("Enter w (int): "))
-          h = int(input("Enter h (int): "))
-          rx = float(input("Enter rx (float): "))
-          ry = float(input("Enter ry (float): "))
-          rz = float(input("Enter rz (float): "))
-          tx = float(input("Enter tx (float): "))
-          ty = float(input("Enter ty (float): "))
-          tz = float(input("Enter tz (float): "))
-          fx = float(input("Enter fx (float): "))
-          fy = float(input("Enter fy (float): "))
-          px = float(input("Enter px (float): "))
-          py = float(input("Enter py (float): "))
+      params = camera_parameters.split(',')
+      if len(params) != 13:  # Check if there are exactly 13 parameters
+        raise ValueError("Invalid number of camera parameters provided!")
 
-          writer.writerow({'name': name, 'w': w, 'h': h, 'rx': rx, 'ry': ry, 'rz': rz, 
-                            'tx': tx, 'ty': ty, 'tz': tz, 'fx': fx, 'fy': fy, 'px': px, 'py': py})
+      name, w, h, rx, ry, rz, tx, ty, tz, fx, fy, px, py = params
+      
+      # Type casting the parameters
+      w = int(w)
+      h = int(h)
+      rx = float(rx)
+      ry = float(ry)
+      rz = float(rz)
+      tx = float(tx)
+      ty = float(ty)
+      tz = float(tz)
+      fx = float(fx)
+      fy = float(fy)
+      px = float(px)
+      py = float(py)
 
-          cont = input("Would you like to enter another record? (yes/no) ").lower()
-          if cont != 'yes':
-              break
-      except KeyboardInterrupt:
-          # Handling manual interruption to stop collecting data
-          pass
+      writer.writerow({
+          'name': name, 'w': w, 'h': h, 'rx': rx, 'ry': ry, 'rz': rz,
+          'tx': tx, 'ty': ty, 'tz': tz, 'fx': fx, 'fy': fy, 'px': px, 'py': py
+      })
+
   return csv_file_path
-
-def int_input(prompt: str) -> int:
-    """Utility function to get integer input."""
-    while True:
-        try:
-            return int(input(prompt))
-        except ValueError:
-            print("Invalid input. Please enter a valid integer.")
-
-def float_input(prompt: str) -> float:
-    """Utility function to get float input."""
-    while True:
-        try:
-            return float(input(prompt))
-        except ValueError:
-            print("Invalid input. Please enter a valid float.")
 
 
 @dataclass
@@ -186,8 +167,8 @@ class _run_args:
     evaluation: _evaluation_args
     # dataset-related parameters
     dataset: _dataset_args
-    # indicates whether calibration arguments are given by user manually
-    is_manual: Optional[bool] = False
+    # indicates the camera parameters if it is given manually
+    camera_parameters: Optional[str] = None
     # indicates the radius of circle or sphere according to sampling method
     radius: Optional[float] = None
     #indicates the specific frame in case a particular one is wanted.
@@ -213,9 +194,9 @@ def parse_args() -> _run_args:
     parser.add_arguments(_run_args, dest="args")
     # Parse arguments and store in 'args'
     args = parser.parse_args().args
-    # Check if 'is_manual' is set to True and if so, generate the CSV.
-    if getattr(args, 'is_manual', False):  # using getattr to ensure backwards compatibility in case is_manual is not set
-        temp_csv_path = _generate_temp_csv()
+    # Check if 'camera_parameters' is not None and if so, generate the calibration file.
+    if getattr(args, 'camera_parameters', None):  # using getattr to ensure backwards compatibility in case is_manual is not set
+        temp_csv_path = _generate_temp_csv(args.camera_parameters)
         args.test.trajectory_via_calibration_file = temp_csv_path
 
     return args

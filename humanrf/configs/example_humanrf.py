@@ -9,11 +9,11 @@ config = [
 
     "--is_orbited", "true",
     "--is_uniformed", "false",
-    "--sample_number", "100",
+    "--sample_number", "150",
     #"--radius", "5",
     "--specific_frame", "0",
-
-    "--test.trajectory_via_calibration_file", "/content/gdrive/MyDrive/archive/Actor01/Sequence1/4x/deneme.csv",
+    "--camera_parameters", "full_body,747,1022,2.7407193318874006,0.09532264501827802,-1.1067867327072083,1.664400091893507,1.4165736816244041,1.697522516802703,1.550998985203991,1.1344146198042888,0.49916487970179935,0.5086164791544809",
+    #"--test.trajectory_via_calibration_file", "/content/gdrive/MyDrive/archive/Actor01/Sequence1/4x/deneme.csv",
     "--test.checkpoint", "/content/gdrive/MyDrive/HumanRF/example_workspace/checkpoints/best.pth",
 
     "--model.log2_hashmap_size", "19",
