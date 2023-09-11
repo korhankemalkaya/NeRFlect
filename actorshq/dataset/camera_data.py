@@ -218,7 +218,7 @@ def compute_object_center(input_csv_path: Path) -> np.array:
   center = translations.mean(axis=0)
   return center
 
-def read_calibration_orbited_csv(input_csv_path: Path, actual_cameras_path: Path, num_samples: int, 
+def read_calibration_orbited_csv(input_csv_path: Path, actual_cameras_path: Path, num_samples: int, radius: Optional[float] = None,
                                 ) -> List[CameraData]:
     """Read camera intrinsics and extrinsics from a calibration CSV file.
 
@@ -248,8 +248,8 @@ def read_calibration_orbited_csv(input_csv_path: Path, actual_cameras_path: Path
       #cameras.append(curr_camera) 
 
       look_at_point = np.array([object_center[0], curr_camera.translation[1], object_center[2]])
-      radius = np.linalg.norm(curr_camera.translation - look_at_point)
-
+      if radius is None:
+        radius = np.linalg.norm(curr_camera.translation - look_at_point)
       for i, angle in enumerate(angles):
         camera_position = look_at_point + radius * np.array([np.cos(angle), 0, np.sin(angle)])       
         if (curr_camera.translation[1] > 2* object_center[1] or curr_camera.translation[1] < 0 ):
@@ -289,7 +289,6 @@ def compute_average_radius(calibration_data_path: Path, object_center: np.array)
 def read_calibration_uniformed_csv(input_csv_path: Path, actual_cameras_path: Path, num_samples: int, radius: Optional[float] = None,
                                 ) -> List[CameraData]:
     """Read camera intrinsics and extrinsics from a calibration CSV file.
-
     Args:
         input_csv_path (Path): Path to a CSV file that contains camera calibration data.
         actual_cameras_path (Path): Path to a CSV file that contains real camera calibration data to calculate the center of the object.
@@ -313,29 +312,32 @@ def read_calibration_uniformed_csv(input_csv_path: Path, actual_cameras_path: Pa
     phi_values = np.linspace(0, np.pi, int(np.sqrt(num_samples)))  # Polar angle
     theta_values = np.linspace(0, 2 * np.pi, int(num_samples / len(phi_values)))  # Azimuthal angle
 
-    for curr_camera in csv_cameras:
+
+
+    for curr_cam in csv_cameras:
       for phi in phi_values:
-        for theta in theta_values:
-            # Convert spherical coordinates to Cartesian coordinates
-            x = object_center[0] + radius * np.sin(phi) * np.cos(theta)
-            y = object_center[1] + radius * np.sin(phi) * np.sin(theta)
-            z = object_center[2] + radius * np.cos(phi)
-            camera_position = np.array([x, y, z])
+          for theta in theta_values:
+              # Convert spherical coordinates to Cartesian coordinates
+              x = object_center[0] + radius * np.sin(phi) * np.cos(theta)
+              y = object_center[1] + radius * np.sin(phi) * np.sin(theta)
+              z = object_center[2] + radius * np.cos(phi)
+              camera_position = np.array([x, y, z])
 
-            # Compute rotation matrix using the look_at function
-            rotation_matrix = look_at(camera_position, object_center, up) 
+              # Compute rotation matrix using the look_at function
+              rotation_matrix = look_at(camera_position, object_center, up) 
 
-            # Create CameraData object for the sampled camera
-            camera = CameraData(
-                name=f"CamSphere_{len(cameras) + 1}",
-                width= curr_camera.width,
-                height= curr_camera.height,
-                rotation_axisangle=Rotation.from_matrix(rotation_matrix).as_rotvec(),
-                translation=camera_position,
-                focal_length=curr_camera.focal_length,
-                principal_point=curr_camera.focal_length,
-            )
-            cameras.append(camera)
+
+              # Create CameraData object for the sampled camera
+              camera = CameraData(
+                  name=f"CamSphere_{len(cameras) + 1}",
+                  width= curr_cam.width,
+                  height= curr_cam.height,
+                  rotation_axisangle=Rotation.from_matrix(rotation_matrix).as_rotvec(),
+                  translation=camera_position,
+                  focal_length=curr_cam.focal_length,
+                  principal_point=curr_cam.principal_point,
+              )
+              cameras.append(camera)
 
     return cameras
 

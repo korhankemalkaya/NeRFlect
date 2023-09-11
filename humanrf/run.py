@@ -156,6 +156,7 @@ if __name__ == "__main__":
           batch_size=config.test.rays_batch_size,
           frame_numbers=frame_numbers,
           num_samples= config.sample_number,
+          radius = config.radius,
           specific_frame=config.specific_frame,
         )
       elif config.is_uniformed and not config.is_orbited:
@@ -168,7 +169,7 @@ if __name__ == "__main__":
           batch_size=config.test.rays_batch_size,
           frame_numbers=frame_numbers,
           num_samples= config.sample_number,
-          radius = config.sphere_radius,
+          radius = config.radius,
           specific_frame=config.specific_frame,
         )
       else:

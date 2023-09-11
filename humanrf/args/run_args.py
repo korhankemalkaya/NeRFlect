@@ -188,8 +188,8 @@ class _run_args:
     dataset: _dataset_args
     # indicates whether calibration arguments are given by user manually
     is_manual: Optional[bool] = False
-    # indicates the radius of sphere if is_uniformed
-    sphere_radius: Optional[float] = None
+    # indicates the radius of circle or sphere according to sampling method
+    radius: Optional[float] = None
     #indicates the specific frame in case a particular one is wanted.
     specific_frame: Optional[int] = None
     # name of the config file (without .py extension) residing under configs/
