@@ -155,7 +155,8 @@ if __name__ == "__main__":
           space_pruning_mode=DataLoader.SpacePruningMode.OCCUPANCY_GRID,
           batch_size=config.test.rays_batch_size,
           frame_numbers=frame_numbers,
-          num_samples= config.sample_number
+          num_samples= config.sample_number,
+          specific_frame=config.specific_frame,
         )
       elif config.is_uniformed and not config.is_orbited:
         trajectory_data_loader = get_trajectory_dataloader_from_calibration_uniformed(
@@ -167,7 +168,8 @@ if __name__ == "__main__":
           batch_size=config.test.rays_batch_size,
           frame_numbers=frame_numbers,
           num_samples= config.sample_number,
-          radius = config.sphere_radius
+          radius = config.sphere_radius,
+          specific_frame=config.specific_frame,
         )
       else:
         trajectory_data_loader = get_trajectory_dataloader_from_calibration(
@@ -178,6 +180,7 @@ if __name__ == "__main__":
           space_pruning_mode=DataLoader.SpacePruningMode.OCCUPANCY_GRID,
           batch_size=config.test.rays_batch_size,
           frame_numbers=frame_numbers,
+          specific_frame=config.specific_frame,
         )
 
       trainer = Trainer(

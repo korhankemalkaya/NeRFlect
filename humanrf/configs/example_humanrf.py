@@ -10,9 +10,10 @@ config = [
     "--is_orbited", "true",
     "--is_uniformed", "false",
     "--sample_number", "100",
-    #"--sphere_radius", "5",
+    "--sphere_radius", "10",
+    "--specific_frame", "0",
 
-    #"--test.trajectory_via_calibration_file", "/content/gdrive/MyDrive/archive/Actor01/Sequence1/4x/calibrat.csv",
+    "--test.trajectory_via_calibration_file", "/content/gdrive/MyDrive/archive/Actor01/Sequence1/4x/calibrationtest.csv",
     "--test.checkpoint", "/content/gdrive/MyDrive/HumanRF/example_workspace/checkpoints/best.pth",
 
     "--model.log2_hashmap_size", "19",

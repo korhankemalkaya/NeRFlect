@@ -190,6 +190,8 @@ class _run_args:
     is_manual: Optional[bool] = False
     # indicates the radius of sphere if is_uniformed
     sphere_radius: Optional[float] = None
+    #indicates the specific frame in case a particular one is wanted.
+    specific_frame: Optional[int] = None
     # name of the config file (without .py extension) residing under configs/
     config: Optional[str] = None
     # random seed for any source of random numbers.

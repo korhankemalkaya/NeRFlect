@@ -18,6 +18,7 @@ def get_trajectory_dataloader_from_calibration(
     space_pruning_mode: DataLoader.SpacePruningMode,
     batch_size: int,
     frame_numbers: Tuple[int, ...],
+    specific_frame: int = None,
 ) -> DataLoader:
     """Creates the trajectory from the calibration path provided as an argument.
 
@@ -43,6 +44,9 @@ def get_trajectory_dataloader_from_calibration(
             Indicates the number of rays to be sampled for each iteration.
         frame_numbers (Tuple[int, ...]):
             Frame numbers (0-indexed) to be used from the dataset.
+        specific_frame: int:
+            In case a specific frame is wanted to be sampled, specific frame should be given.
+
 
     Returns:
         DataLoader: A data loader for the trajectory through the cameras in the input calibration file.
@@ -62,16 +66,22 @@ def get_trajectory_dataloader_from_calibration(
     render_sequence = []
     total_num_frames = len(frame_numbers)
     total_length = max(total_num_frames, trajectory_num_cameras)
-    for num in range(total_length):
-        camera_number = num % trajectory_num_cameras
-        if (num // trajectory_num_cameras) % 2 == 1:
-            camera_number = trajectory_num_cameras - 1 - camera_number
+    if specific_frame is None:
+      for num in range(total_length):
+          camera_number = num % trajectory_num_cameras
+          if (num // trajectory_num_cameras) % 2 == 1:
+              camera_number = trajectory_num_cameras - 1 - camera_number
 
-        frame_idx = num % total_num_frames
-        if (num // total_num_frames) % 2 == 1:
-            frame_idx = total_num_frames - 1 - frame_idx
+          frame_idx = num % total_num_frames
+          if (num // total_num_frames) % 2 == 1:
+              frame_idx = total_num_frames - 1 - frame_idx
 
-        render_sequence.append((camera_number, frame_numbers[frame_idx]))
+          render_sequence.append((camera_number, frame_numbers[frame_idx]))
+    else:
+      assert specific_frame > -1 and specific_frame < total_num_frames
+      for camera_number in range(trajectory_num_cameras):
+        render_sequence.append((camera_number, frame_numbers[specific_frame]))
+
     return DataLoader(
       dataset=VolumetricDataset(new_dataset_fp.folder, crop_center_square=False),
       device=device,
@@ -218,6 +228,7 @@ def get_trajectory_dataloader_from_calibration_orbited(
     batch_size: int,
     frame_numbers: Tuple[int, ...],
     num_samples: int,
+    specific_frame: int = None,
 ) -> DataLoader:
 
   cameras = read_calibration_orbited_csv(calibration_path, VolumetricDatasetFilepaths(base_data_folder).calibration_path, num_samples)          
@@ -233,6 +244,7 @@ def get_trajectory_dataloader_from_calibration_orbited(
       space_pruning_mode=space_pruning_mode,
       batch_size=batch_size,
       frame_numbers=frame_numbers,
+      specific_frame=specific_frame,
     )
 
 
@@ -246,6 +258,8 @@ def get_trajectory_dataloader_from_calibration_uniformed(
     frame_numbers: Tuple[int, ...],
     num_samples: int,
     radius: float = None,
+    specific_frame: int = None,
+
 ) -> DataLoader:
 
   cameras = read_calibration_uniformed_csv(calibration_path, VolumetricDatasetFilepaths(base_data_folder).calibration_path, num_samples, radius)          
@@ -261,4 +275,5 @@ def get_trajectory_dataloader_from_calibration_uniformed(
       space_pruning_mode=space_pruning_mode,
       batch_size=batch_size,
       frame_numbers=frame_numbers,
+      specific_frame=specific_frame,
     )
