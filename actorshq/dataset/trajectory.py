@@ -222,6 +222,7 @@ def get_trajectory_dataloader_from_keycams(
 def get_trajectory_dataloader_from_calibration_orbited(
     calibration_path: Path,
     base_data_folder: Path,
+    results_folder: Path,
     device: str,
     dataloader_output_mode: DataLoader.OutputMode,
     space_pruning_mode: DataLoader.SpacePruningMode,
@@ -236,6 +237,9 @@ def get_trajectory_dataloader_from_calibration_orbited(
   with TemporaryDirectory() as tmpdir:
     tmp_calibration_path = Path(tmpdir) / "calibration.csv"
     write_calibration_csv(cameras, tmp_calibration_path)
+
+    results_folder.mkdir(parents=True, exist_ok=True)
+    shutil.copy(tmp_calibration_path, results_folder / "calibration.csv")
 
     return get_trajectory_dataloader_from_calibration(
       calibration_path=tmp_calibration_path,
@@ -252,6 +256,7 @@ def get_trajectory_dataloader_from_calibration_orbited(
 def get_trajectory_dataloader_from_calibration_uniformed(
     calibration_path: Path,
     base_data_folder: Path,
+    results_folder: Path,
     device: str,
     dataloader_output_mode: DataLoader.OutputMode,
     space_pruning_mode: DataLoader.SpacePruningMode,
@@ -267,6 +272,10 @@ def get_trajectory_dataloader_from_calibration_uniformed(
   with TemporaryDirectory() as tmpdir:
     tmp_calibration_path = Path(tmpdir) / "calibration.csv"
     write_calibration_csv(cameras, tmp_calibration_path)
+    
+    results_folder.mkdir(parents=True, exist_ok=True)
+    shutil.copy(tmp_calibration_path, results_folder / "calibration.csv")
+
 
     return get_trajectory_dataloader_from_calibration(
       calibration_path=tmp_calibration_path,

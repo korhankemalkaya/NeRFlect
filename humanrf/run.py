@@ -150,6 +150,7 @@ if __name__ == "__main__":
         trajectory_data_loader = get_trajectory_dataloader_from_calibration_orbited(
           calibration_path=config.test.trajectory_via_calibration_file,
           base_data_folder=data_folder,
+          results_folder = results_folder,
           device=config.device,
           dataloader_output_mode=DataLoader.OutputMode.RAYS_AND_SAMPLES,
           space_pruning_mode=DataLoader.SpacePruningMode.OCCUPANCY_GRID,
@@ -163,6 +164,7 @@ if __name__ == "__main__":
         trajectory_data_loader = get_trajectory_dataloader_from_calibration_uniformed(
           calibration_path=config.test.trajectory_via_calibration_file,
           base_data_folder=data_folder,
+          results_folder = results_folder,
           device=config.device,
           dataloader_output_mode=DataLoader.OutputMode.RAYS_AND_SAMPLES,
           space_pruning_mode=DataLoader.SpacePruningMode.OCCUPANCY_GRID,
