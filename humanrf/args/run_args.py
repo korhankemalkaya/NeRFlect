@@ -2,6 +2,7 @@ import importlib
 import sys
 import os
 import csv
+import numpy as np
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Tuple, List, Dict
@@ -142,6 +143,8 @@ def _generate_temp_csv(camera_parameters: str):
 
   return csv_file_path
 
+def _generate_additional_center(object_center_addition: str):
+ return np.array([float(x) for x in object_center_addition.split(',')])
 
 @dataclass
 class _run_args:
@@ -169,6 +172,8 @@ class _run_args:
     dataset: _dataset_args
     # indicates the camera parameters if it is given manually
     camera_parameters: Optional[str] = None
+    # indicates the adjustable object center parameters
+    object_center_addition: Optional[str] = None
     # indicates the radius of circle or sphere according to sampling method
     radius: Optional[float] = None
     #indicates the specific frame in case a particular one is wanted.
@@ -196,7 +201,9 @@ def parse_args() -> _run_args:
     args = parser.parse_args().args
     # Check if 'camera_parameters' is not None and if so, generate the calibration file.
     if getattr(args, 'camera_parameters', None):  # using getattr to ensure backwards compatibility in case is_manual is not set
-        temp_csv_path = _generate_temp_csv(args.camera_parameters)
-        args.test.trajectory_via_calibration_file = temp_csv_path
-
+      temp_csv_path = _generate_temp_csv(args.camera_parameters)
+      args.test.trajectory_via_calibration_file = temp_csv_path
+    if getattr(args, 'object_center_addition', None): 
+      additional = _generate_additional_center(args.object_center_addition)
+      args.object_center_addition = additional
     return args

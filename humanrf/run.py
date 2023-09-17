@@ -159,6 +159,7 @@ if __name__ == "__main__":
           num_samples= config.sample_number,
           radius = config.radius,
           specific_frame=config.specific_frame,
+          object_center_addition = config.object_center_addition
         )
       elif config.is_uniformed and not config.is_orbited:
         trajectory_data_loader = get_trajectory_dataloader_from_calibration_uniformed(
@@ -173,6 +174,7 @@ if __name__ == "__main__":
           num_samples= config.sample_number,
           radius = config.radius,
           specific_frame=config.specific_frame,
+          object_center_addition = config.object_center_addition
         )
       else:
         trajectory_data_loader = get_trajectory_dataloader_from_calibration(

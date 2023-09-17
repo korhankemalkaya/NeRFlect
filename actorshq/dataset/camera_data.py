@@ -218,10 +218,9 @@ def compute_object_center(input_csv_path: Path) -> np.array:
   center = translations.mean(axis=0)
   return center
 
-def read_calibration_orbited_csv(input_csv_path: Path, actual_cameras_path: Path, num_samples: int, radius: Optional[float] = None,
+def read_calibration_orbited_csv(input_csv_path: Path, actual_cameras_path: Path, num_samples: int, object_center_addition: Optional[np.array] , radius: Optional[float] = None
                                 ) -> List[CameraData]:
     """Read camera intrinsics and extrinsics from a calibration CSV file.
-
     Args:
         input_csv_path (Path): Path to a CSV file that contains camera calibration data.
         actual_cameras_path (Path): Path to a CSV file that contains real camera calibration data to calculate the center of the object.
@@ -232,9 +231,10 @@ def read_calibration_orbited_csv(input_csv_path: Path, actual_cameras_path: Path
     """
     object_center = compute_object_center(actual_cameras_path)
 
-    if object_center is None:
-        object_center = np.array([0, 0, 0])
-    
+    if object_center_addition is None:
+        object_center_addition = np.array([0, 0, 0])
+    assert len(object_center_addition) == 3, "Additional object center parameters must be a size of 3."
+    object_center = object_center + object_center_addition
     #Global up direction in RDF convention
     up = np.array([0, -1, 0])
 
@@ -286,7 +286,7 @@ def compute_average_radius(calibration_data_path: Path, object_center: np.array)
     average_radius = distances.mean()
     return average_radius
 
-def read_calibration_uniformed_csv(input_csv_path: Path, actual_cameras_path: Path, num_samples: int, radius: Optional[float] = None,
+def read_calibration_uniformed_csv(input_csv_path: Path, actual_cameras_path: Path, num_samples: int,  object_center_addition: Optional[np.array], radius: Optional[float] = None,
                                 ) -> List[CameraData]:
     """Read camera intrinsics and extrinsics from a calibration CSV file.
     Args:
@@ -298,8 +298,10 @@ def read_calibration_uniformed_csv(input_csv_path: Path, actual_cameras_path: Pa
         List[CameraData]: A list of `CameraData` objects that describe multiple camera intrinsics and extrinsics and uniformed ones. 
     """
     object_center = compute_object_center(actual_cameras_path)
-    if object_center is None:
-        object_center = np.array([0, 0, 0])
+    if object_center_addition is None:
+        object_center_addition = np.array([0, 0, 0])
+    assert len(object_center_addition) == 3, "Additional object center parameters must be a size of 3."
+    object_center = object_center + object_center_addition
 
     if radius is None:
       radius = compute_average_radius(actual_cameras_path, object_center)
@@ -311,9 +313,7 @@ def read_calibration_uniformed_csv(input_csv_path: Path, actual_cameras_path: Pa
     cameras = []
     phi_values = np.linspace(0, np.pi, int(np.sqrt(num_samples)))  # Polar angle
     theta_values = np.linspace(0, 2 * np.pi, int(num_samples / len(phi_values)))  # Azimuthal angle
-
-
-
+    
     for curr_cam in csv_cameras:
       for phi in phi_values:
           for theta in theta_values:

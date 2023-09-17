@@ -4,6 +4,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Tuple, List
 
+import numpy as np
+
 from actorshq.dataset.camera_data import read_calibration_csv, read_calibration_orbited_csv, write_calibration_csv, read_calibration_list, CameraData, read_calibration_uniformed_csv
 from actorshq.dataset.data_loader import DataLoader
 from actorshq.dataset.generate_camera_trajectory import generate_camera_trajectory
@@ -231,12 +233,15 @@ def get_trajectory_dataloader_from_calibration_orbited(
     num_samples: int,
     radius: float = None,
     specific_frame: int = None,
+    object_center_addition: np.array = None,
+
 ) -> DataLoader:
 
-  cameras = read_calibration_orbited_csv(calibration_path, VolumetricDatasetFilepaths(base_data_folder).calibration_path, num_samples, radius)          
+  cameras = read_calibration_orbited_csv(calibration_path, VolumetricDatasetFilepaths(base_data_folder).calibration_path, num_samples, object_center_addition,radius)          
   with TemporaryDirectory() as tmpdir:
     tmp_calibration_path = Path(tmpdir) / "calibration.csv"
     write_calibration_csv(cameras, tmp_calibration_path)
+  
 
     results_folder.mkdir(parents=True, exist_ok=True)
     shutil.copy(tmp_calibration_path, results_folder / "calibration.csv")
@@ -265,10 +270,12 @@ def get_trajectory_dataloader_from_calibration_uniformed(
     num_samples: int,
     radius: float = None,
     specific_frame: int = None,
+    object_center_addition: np.array = None,
+
 
 ) -> DataLoader:
 
-  cameras = read_calibration_uniformed_csv(calibration_path, VolumetricDatasetFilepaths(base_data_folder).calibration_path, num_samples, radius)          
+  cameras = read_calibration_uniformed_csv(calibration_path, VolumetricDatasetFilepaths(base_data_folder).calibration_path, num_samples, object_center_addition,radius)          
   with TemporaryDirectory() as tmpdir:
     tmp_calibration_path = Path(tmpdir) / "calibration.csv"
     write_calibration_csv(cameras, tmp_calibration_path)
