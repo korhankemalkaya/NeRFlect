@@ -31,6 +31,7 @@ sudo apt-get install libglm-dev
 
 # Install required packages and Tiny CUDA NN.
 pip install -r requirements.txt
+pip install pandas #Additional to the original HumanRF environment
 pip install git+https://github.com/NVlabs/tiny-cuda-nn/#subdirectory=bindings/torch
 
 # Install ActorsHQ package (dataset and data loader)
@@ -62,7 +63,6 @@ To start, one should download a part of ActorsHQ, which can be done by the follo
 For that, you will need an access file, `actorshq_access_4x.yaml`, which you can request [here](https://www.actors-hq.com/), see [original HumanRF repository](https://github.com/synthesiaresearch/humanrf)  for more details.
 
  Having access to ActorsHQ, one can run the program by specifying some vital arguments:
- - **is_manual:** *An optional command line (terminal) argument. If True, the user is expected to specify camera parameters from the console manually.*
 
    Example use can be found below:
 ```bash
@@ -70,13 +70,15 @@ For that, you will need an access file, `actorshq_access_4x.yaml`, which you can
     --config example_humanrf \
     --workspace /tmp/example_workspace \
     --dataset.path /tmp/actorshq \
-    --is_manual True
 ```
- - **"test.trajectory_via_calibration_file** *A configuration file argument. If is_manual is False, then the user is expected to pass the path of the calibration file to this argument.* 
+ - **camera_parameters:** *An optional configuration file argument. It should be specified according to the calibration data format, whose example can be found below. It allows one to enter a camera's parameter manually.*
+ - **"test.trajectory_via_calibration_file** *A configuration file argument. If the camera_parameters is not specified, then the user is expected to pass the path of the calibration file to this argument.* 
  - **is_orbited:** *A configuration file argument. If True, the model rotates the input camera in a circular orbit and samples new cameras.*
  - **is_uniformed:** *A configuration file argument. If True, the model performs a uniform (evenly distributed) sampling of new cameras on a sphere surface*
- - **sphere_radius:** *An optional configuration file argument. If is_uniformed is True, the user can specify the sphere's radius. If not specified, the radius is calculated from the given camera and the object center.*
+ - **radius:** *An optional configuration file argument. If either is_uniformed or is_orbited is True, the user can specify the sphere's radius. If not specified, the radius is calculated from the given camera and the object center.*
  - **sample_number:** *A configuration file argument for the sampling count.*
+ - **specific_frame:** *An optional configuration file argument to render from a specific frame. If not specified, HumanRF's original framing process is used.*
+ - **object_center_addition:** *An optional configuration file argument. It allows users to manipulate the object center. Assuming the original object center is calculated as (a,b,c), one can specify this parameter as (x,y,z) to render images around the new center (a+x, b+y, c+z).*
  - **test.checkpoint:** *A configuration file argument for the path of the trained model.*
 
    
