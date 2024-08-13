@@ -23,7 +23,7 @@ NeRFlect enhances the capabilities of the HumanRF model, allowing users to gener
 
 ## Report
 
-For an in-depth exploration of the project, including methodologies, experiments, and results, please refer to the [Project Report](report/report.pdf).
+For an in-depth exploration of the project, including methodologies, experiments, and results, please refer to the [Project Report](report/NeRFlect.pdf).
 
 ## Installation
 
