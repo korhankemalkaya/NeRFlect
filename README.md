@@ -4,6 +4,7 @@ Extend the horizons of Neural Radiance Fields with NeRFlect, an extension to var
 - [Introduction](#introduction)
 - [Features](#features)
 - [Potential Applications](#potential-applications)
+- [Report](#report)
 - [Installation](#installation)
 - [Detailed User Guide](#detailed-user-guide)
 - [Acknowledgment](#acknowledgment)
@@ -19,6 +20,10 @@ NeRFlect enhances the capabilities of the HumanRF model, allowing users to gener
 ## Potential Applications
 - **Augmented Dataset Generation:** Enhance AI-driven human visual datasets by simulating diverse camera angles and perspectives using NeRFlect, promoting the training of more robust models.
 - **Avatar Creation for Virtual Worlds:** Automate personalized avatar generation for VR and AR platforms, offering users a comprehensive 360-degree 3D view of their digital existence.
+
+## Report
+
+For an in-depth exploration of the project, including methodologies, experiments, and results, please refer to the [Project Report](report/report.pdf).
 
 ## Installation
 
